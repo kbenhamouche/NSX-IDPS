@@ -145,7 +145,7 @@ data "vsphere_virtual_machine" "threat-vm-template" {
 
 ###Delay for vCenter to sync with NSX for Logical Switch
 resource "null_resource" "before" {
-  depends_on    = [nsxt_policy_segment.external, nsxt_policy_segment.dmz, nsxt_policy_segment.internal]
+  depends_on = [nsxt_policy_segment.external, nsxt_policy_segment.dmz, nsxt_policy_segment.internal]
 }
 
 resource "null_resource" "delay" {
@@ -162,20 +162,20 @@ resource "null_resource" "after" {
 }
 
 data "vsphere_network" "external" {
-  depends_on    = [null_resource.after]
-  name          = nsxt_policy_segment.external.display_name
+  depends_on = [null_resource.after]
+  name  = nsxt_policy_segment.external.display_name
   datacenter_id = data.vsphere_datacenter.datacenter.id
 }
 
 data "vsphere_network" "dmz" {
-  depends_on    = [null_resource.after]
-  name          = nsxt_policy_segment.dmz.display_name
+  depends_on = [null_resource.after]
+  name = nsxt_policy_segment.dmz.display_name
   datacenter_id = data.vsphere_datacenter.datacenter.id
 }
 
 data "vsphere_network" "internal" {
-  depends_on    = [null_resource.after]
-  name          = nsxt_policy_segment.internal.display_name
+  depends_on = [null_resource.after]
+  name = nsxt_policy_segment.internal.display_name
   datacenter_id = data.vsphere_datacenter.datacenter.id
 }
 
@@ -184,10 +184,10 @@ data "vsphere_network" "internal" {
 // Create new VM for External
 resource "vsphere_virtual_machine" "threat-vm" {
   depends_on = [nsxt_policy_segment.external, data.vsphere_network.external]
-  name             = "IDPS-Threat-vm"
-  datastore_id     = data.vsphere_datastore.datastore-external.id
+  name = "IDPS-Threat-vm"
+  datastore_id = data.vsphere_datastore.datastore-external.id
   resource_pool_id = data.vsphere_compute_cluster.compute-external.resource_pool_id
-  guest_id         = "ubuntu64Guest"
+  guest_id = "ubuntu64Guest"
   network_interface {
     network_id = data.vsphere_network.external.id
   }
@@ -195,8 +195,8 @@ resource "vsphere_virtual_machine" "threat-vm" {
     template_uuid = data.vsphere_virtual_machine.threat-vm-template.id
   }
   disk {
-    label            = "threat-vm.vmdk"
-    size             = 32
+    label = "threat-vm.vmdk"
+    size = 32
     thin_provisioned = true
   }
 }
@@ -204,10 +204,10 @@ resource "vsphere_virtual_machine" "threat-vm" {
 // Create new VM for DMZ
 resource "vsphere_virtual_machine" "dmz1-vm" {
   depends_on = [nsxt_policy_segment.dmz, data.vsphere_network.dmz]
-  name             = "IDPS-WEB1-vm"
-  datastore_id     = data.vsphere_datastore.datastore-internal1.id
+  name = "IDPS-WEB1-vm"
+  datastore_id = data.vsphere_datastore.datastore-internal1.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
-  guest_id         = "ubuntu64Guest"
+  guest_id = "ubuntu64Guest"
   network_interface {
     network_id = data.vsphere_network.dmz.id
   }
@@ -215,18 +215,18 @@ resource "vsphere_virtual_machine" "dmz1-vm" {
     template_uuid = data.vsphere_virtual_machine.vm-template.id
   }
   disk {
-    label            = "web1-vm.vmdk"
-    size             = 32
+    label = "web1-vm.vmdk"
+    size = 32
     thin_provisioned = true
   }
 }
 
 resource "vsphere_virtual_machine" "dmz2-vm" {
   depends_on = [nsxt_policy_segment.dmz, data.vsphere_network.dmz]
-  name             = "IDPS-WEB2-vm"
-  datastore_id     = data.vsphere_datastore.datastore-internal1.id
+  name = "IDPS-WEB2-vm"
+  datastore_id = data.vsphere_datastore.datastore-internal2.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
-  guest_id         = "ubuntu64Guest"
+  guest_id = "ubuntu64Guest"
   network_interface {
     network_id = data.vsphere_network.dmz.id
   }
@@ -234,8 +234,8 @@ resource "vsphere_virtual_machine" "dmz2-vm" {
     template_uuid = data.vsphere_virtual_machine.vm-template.id
   }
   disk {
-    label            = "web2-vm.vmdk"
-    size             = 32
+    label = "web2-vm.vmdk"
+    size  = 32
     thin_provisioned = true
   }
 }
@@ -243,10 +243,10 @@ resource "vsphere_virtual_machine" "dmz2-vm" {
 // Create new VM for Internal
 resource "vsphere_virtual_machine" "internal1-vm" {
   depends_on = [nsxt_policy_segment.internal, data.vsphere_network.internal]
-  name             = "IDPS-APP1-vm"
-  datastore_id     = data.vsphere_datastore.datastore-internal2.id
+  name = "IDPS-APP1-vm"
+  datastore_id = data.vsphere_datastore.datastore-internal1.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
-  guest_id         = "ubuntu64Guest"
+  guest_id = "ubuntu64Guest"
   network_interface {
     network_id = data.vsphere_network.internal.id
   }
@@ -254,18 +254,18 @@ resource "vsphere_virtual_machine" "internal1-vm" {
     template_uuid = data.vsphere_virtual_machine.vm-template.id
   }
   disk {
-    label            = "app1-vm.vmdk"
-    size             = 32
+    label = "app1-vm.vmdk"
+    size = 32
     thin_provisioned = true
   }
 }
 
 resource "vsphere_virtual_machine" "internal2-vm" {
   depends_on = [nsxt_policy_segment.internal, data.vsphere_network.internal]
-  name             = "IDPS-APP2-vm"
-  datastore_id     = data.vsphere_datastore.datastore-internal2.id
+  name = "IDPS-APP2-vm"
+  datastore_id = data.vsphere_datastore.datastore-internal2.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
-  guest_id         = "ubuntu64Guest"
+  guest_id = "ubuntu64Guest"
   network_interface {
     network_id = data.vsphere_network.internal.id
   }
@@ -273,8 +273,8 @@ resource "vsphere_virtual_machine" "internal2-vm" {
     template_uuid = data.vsphere_virtual_machine.vm-template.id
   }
   disk {
-    label            = "app2-vm.vmdk"
-    size             = 32
+    label = "app2-vm.vmdk"
+    size  = 32
     thin_provisioned = true
   }
 }
@@ -292,11 +292,11 @@ resource "nsxt_policy_vm_tags" "threat_vm_tag" {
   instance_id = data.nsxt_policy_vm.threat_vm.instance_id
   tag {
     scope = "Environment"
-    tag   = "EXTERNAL"
+    tag = "EXTERNAL"
   }
   tag {
     scope = "appName"
-    tag   = "threat"
+    tag = "threat"
   }
 }
 
@@ -316,15 +316,15 @@ resource "nsxt_policy_vm_tags" "dmz1_vm_tag" {
   instance_id = data.nsxt_policy_vm.dmz1_vm.instance_id
   tag {
     scope = "Environment"
-    tag   = "Production"
+    tag = "Production"
   }
   tag {
     scope = "appName"
-    tag   = "Application-1"
+    tag = "Application-1"
   }
   tag {
     scope = "appTier"
-    tag   = "web-server"
+    tag = "web-server"
   }
 }
 
@@ -332,16 +332,16 @@ resource "nsxt_policy_vm_tags" "dmz2_vm_tag" {
   depends_on = [data.nsxt_policy_vm.dmz2_vm, vsphere_virtual_machine.dmz2-vm]
   instance_id = data.nsxt_policy_vm.dmz2_vm.instance_id
   tag {
-    scope = "Environnement"
-    tag   = "Development"
+    scope = "Environment"
+    tag = "Development"
   }
   tag {
     scope = "appName"
-    tag   = "Application-2"
+    tag = "Application-2"
   }
   tag {
     scope = "appTier"
-    tag   = "web-server"
+    tag = "web-server"
   }
 }
 
@@ -361,15 +361,15 @@ resource "nsxt_policy_vm_tags" "internal1_vm_vm_tag" {
   instance_id = data.nsxt_policy_vm.internal1_vm.instance_id
   tag {
     scope = "Environment"
-    tag   = "Production"
+    tag = "Production"
   }
   tag {
     scope = "appName"
-    tag   = "Application-1"
+    tag = "Application-1"
   }
   tag {
     scope = "appTier"
-    tag   = "app-server"
+    tag = "app-server"
   }
 }
 
@@ -392,37 +392,114 @@ resource "nsxt_policy_vm_tags" "internal2_vm_vm_tag" {
 
 # Create Security Groups
 resource "nsxt_policy_group" "env_threat" {
-    display_name = "Production Applications"
+    display_name = "IDPS - External"
     criteria {
         condition {
-            key         = "Tag"
+            key = "Tag"
             member_type = "VirtualMachine"
-            operator    = "CONTAINS"
-            value       = "Environment|EXTERNAL"
+            operator = "CONTAINS"
+            value = "Environment|EXTERNAL"
         }
     }
 }
 
 resource "nsxt_policy_group" "env_prod" {
-    display_name = "Production Applications"
+    display_name = "IDPS - Production Applications"
     criteria {
         condition {
-            key         = "Tag"
+            key = "Tag"
             member_type = "VirtualMachine"
-            operator    = "CONTAINS"
-            value       = "Environment|Production"
+            operator = "CONTAINS"
+            value = "Environment|Production"
         }
     }
 }
 
 resource "nsxt_policy_group" "env_dev" {
-    display_name = "Development Applications"
+    display_name = "IDPS - Development Applications"
     criteria {
         condition {
-            key         = "Tag"
+            key = "Tag"
             member_type = "VirtualMachine"
-            operator    = "CONTAINS"
-            value       = "Environment|Development"
+            operator = "CONTAINS"
+            value = "Environment|Development"
         }
     }
+}
+
+# Create DFW Rules
+resource "nsxt_policy_security_policy" "external2prod" {
+  display_name = "IDPS - External-to-Production"
+  category = "Environment"
+  locked = false
+  stateful = true
+  tcp_strict = false
+
+  rule {
+    display_name = "allow any to production"
+    source_groups = [nsxt_policy_group.env_threat.path]
+    destination_groups = [nsxt_policy_group.env_prod.path]
+    action = "ALLOW"
+    logged = false
+    scope = [nsxt_policy_group.env_threat.path]
+  }
+  rule {
+    display_name = "deny all"
+    source_groups = [nsxt_policy_group.env_threat.path]
+    action = "DROP"
+    logged = false
+    scope = [nsxt_policy_group.env_threat.path]
+  }
+}
+
+resource "nsxt_policy_security_policy" "external2dev" {
+  display_name = "IDPS - External-to-Development"
+  category = "Environment"
+  locked = false
+  stateful = true
+  tcp_strict = false
+
+  rule {
+    display_name = "allow any to development"
+    source_groups = [nsxt_policy_group.env_threat.path]
+    destination_groups = [nsxt_policy_group.env_dev.path]
+    action = "ALLOW"
+    logged = false
+    scope = [nsxt_policy_group.env_threat.path]
+  }
+  rule {
+    display_name = "deny all"
+    source_groups = [nsxt_policy_group.env_threat.path]
+    action = "DROP"
+    logged = false
+    scope = [nsxt_policy_group.env_threat.path]
+  }
+}
+
+data "nsxt_policy_service" "ssh" {
+  display_name = "SSH"
+}
+
+resource "nsxt_policy_security_policy" "external" {
+  display_name = "IDPS - External rules"
+  category = "Application"
+  locked = false
+  stateful = true
+  tcp_strict = false
+
+  rule {
+    display_name = "allow ssh"
+    destination_groups = [nsxt_policy_group.env_threat.path]
+    services = [data.nsxt_policy_service.ssh.path]
+    action = "ALLOW"
+    logged = false
+    scope = [nsxt_policy_group.env_threat.path]
+  }
+  rule {
+    display_name = "deny all"
+    destination_groups = [nsxt_policy_group.env_threat.path]
+    action = "DROP"
+    logged = false
+    scope = [nsxt_policy_group.env_threat.path]
+  }
 }
