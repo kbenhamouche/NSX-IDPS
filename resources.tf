@@ -427,9 +427,9 @@ resource "nsxt_policy_group" "env_dev" {
     }
 }
 
-# Create DFW Rules
-resource "nsxt_policy_security_policy" "external2prod" {
-  display_name = "IDPS - External-to-Production"
+# Create DFW Rules for Environment
+resource "nsxt_policy_security_policy" "external_env" {
+  display_name = "IDPS - External Env."
   category = "Environment"
   locked = false
   stateful = true
@@ -441,31 +441,15 @@ resource "nsxt_policy_security_policy" "external2prod" {
     destination_groups = [nsxt_policy_group.env_prod.path]
     action = "ALLOW"
     logged = false
-    scope = [nsxt_policy_group.env_threat.path]
+    scope = [nsxt_policy_group.env_threat.path, nsxt_policy_group.env_prod.path]
   }
-  rule {
-    display_name = "deny all"
-    source_groups = [nsxt_policy_group.env_threat.path]
-    action = "DROP"
-    logged = false
-    scope = [nsxt_policy_group.env_threat.path]
-  }
-}
-
-resource "nsxt_policy_security_policy" "external2dev" {
-  display_name = "IDPS - External-to-Development"
-  category = "Environment"
-  locked = false
-  stateful = true
-  tcp_strict = false
-
   rule {
     display_name = "allow any to development"
     source_groups = [nsxt_policy_group.env_threat.path]
     destination_groups = [nsxt_policy_group.env_dev.path]
     action = "ALLOW"
     logged = false
-    scope = [nsxt_policy_group.env_threat.path]
+    scope = [nsxt_policy_group.env_threat.path, nsxt_policy_group.env_dev.path]
   }
   rule {
     display_name = "deny all"
@@ -476,6 +460,41 @@ resource "nsxt_policy_security_policy" "external2dev" {
   }
 }
 
+resource "nsxt_policy_security_policy" "prod_env" {
+  display_name = "IDPS - Production Env."
+  category = "Environment"
+  locked = false
+  stateful = true
+  tcp_strict = false
+
+  rule {
+    display_name = "allow any to external"
+    source_groups = [nsxt_policy_group.env_prod.path]
+    destination_groups = [nsxt_policy_group.env_threat.path]
+    action = "ALLOW"
+    logged = false
+    scope = [nsxt_policy_group.env_prod.path, nsxt_policy_group.env_threat.path]
+  }
+}
+
+resource "nsxt_policy_security_policy" "dev_env" {
+  display_name = "IDPS - Development Env."
+  category = "Environment"
+  locked = false
+  stateful = true
+  tcp_strict = false
+
+  rule {
+    display_name = "allow any to external"
+    source_groups = [nsxt_policy_group.env_dev.path]
+    destination_groups = [nsxt_policy_group.env_threat.path]
+    action = "ALLOW"
+    logged = false
+    scope = [nsxt_policy_group.env_dev.path, nsxt_policy_group.env_threat.path]
+  }
+}
+
+# Create DFW Rules for Applications
 data "nsxt_policy_service" "ssh" {
   display_name = "SSH"
 }
