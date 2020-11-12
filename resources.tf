@@ -46,11 +46,11 @@ resource "nsxt_policy_segment" "external" {
   transport_zone_path = data.nsxt_policy_transport_zone.overlay_tz.path
 
   subnet {
-    cidr = "192.168.10.1/24"
-    dhcp_ranges = ["192.168.10.100-192.168.10.200"]
+    cidr = "192.114.209.1/24"
+    dhcp_ranges = ["192.114.209.151-192.114.209.152"]
 
     dhcp_v4_config {
-      server_address = "192.168.10.2/24"
+      server_address = "192.114.209.2/24"
       lease_time     = 36000
     }
   }
@@ -68,11 +68,11 @@ resource "nsxt_policy_segment" "dmz" {
   transport_zone_path = data.nsxt_policy_transport_zone.overlay_tz.path
 
   subnet {
-    cidr = "172.51.20.1/24"
-    dhcp_ranges = ["172.51.20.100-172.51.20.200"]
+    cidr = "192.168.10.1/24"
+    dhcp_ranges = ["192.168.10.100-192.168.10.200"]
 
     dhcp_v4_config {
-      server_address = "172.51.20.2/24"
+      server_address = "192.168.10.2/24"
       lease_time     = 36000
     }
   }
@@ -90,17 +90,55 @@ resource "nsxt_policy_segment" "internal" {
   transport_zone_path = data.nsxt_policy_transport_zone.overlay_tz.path
 
   subnet {
-    cidr = "172.51.30.1/24"
-    dhcp_ranges = ["172.51.30.100-172.51.30.200"]
+    cidr = "192.168.20.1/24"
+    dhcp_ranges = ["192.168.20.100-192.168.20.200"]
 
     dhcp_v4_config {
-      server_address = "172.51.30.2/24"
+      server_address = "192.168.20.2/24"
       lease_time     = 36000
     }
   }
   advanced_config {
     connectivity = "ON"
   }
+}
+
+// Create SNAT and DNAT rules for DMZ Segment
+resource "nsxt_policy_nat_rule" "rule1" {
+  nsx_id              = "DMZ-SNAT"
+  display_name        = "DMZ-SNAT"
+  action              = "SNAT"
+  source_networks     = ["192.168.10.0/24"]
+  translated_networks = ["193.1.1.110"]
+  gateway_path        = nsxt_policy_tier1_gateway.t1_gateway.path
+}
+
+resource "nsxt_policy_nat_rule" "rule2" {
+  nsx_id               = "DMZ-DNAT-Production"
+  display_name         = "DMZ-DNAT-Production"
+  action               = "DNAT"
+  translated_networks  = ["192.168.10.100/32"]
+  destination_networks = ["193.1.1.100/32"]
+  gateway_path         = nsxt_policy_tier1_gateway.t1_gateway.path
+}
+
+resource "nsxt_policy_nat_rule" "rule3" {
+  nsx_id               = "DMZ-DNAT-Development"
+  display_name         = "DMZ-DNAT-Development"
+  action               = "DNAT"
+  translated_networks  = ["192.168.10.101/32"]
+  destination_networks = ["193.1.1.101/32"]
+  gateway_path         = nsxt_policy_tier1_gateway.t1_gateway.path
+}
+
+// Create SNAT rules for Internal Segment
+resource "nsxt_policy_nat_rule" "rule4" {
+  nsx_id              = "Internal-SNAT"
+  display_name        = "Internal-SNAT"
+  action              = "SNAT"
+  source_networks     = ["192.168.20.0/24"]
+  translated_networks = ["193.1.1.120"]
+  gateway_path        = nsxt_policy_tier1_gateway.t1_gateway.path
 }
 
 // ----- vCenter Data -----
@@ -221,6 +259,19 @@ resource "vsphere_virtual_machine" "dmz1-vm" {
   }
 }
 
+resource "null_resource" "before1" {
+  depends_on = [vsphere_virtual_machine.dmz1-vm]
+}
+
+resource "null_resource" "delay1" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  triggers = {
+    "before1" = null_resource.before.id
+  }
+}
+
 resource "vsphere_virtual_machine" "dmz2-vm" {
   depends_on = [nsxt_policy_segment.dmz, data.vsphere_network.dmz]
   name = "IDPS-WEB2-vm"
@@ -257,6 +308,19 @@ resource "vsphere_virtual_machine" "internal1-vm" {
     label = "app1-vm.vmdk"
     size = 32
     thin_provisioned = true
+  }
+}
+
+resource "null_resource" "before2" {
+  depends_on = [vsphere_virtual_machine.internal1-vm]
+}
+
+resource "null_resource" "delay2" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  triggers = {
+    "before2" = null_resource.before.id
   }
 }
 
@@ -392,39 +456,57 @@ resource "nsxt_policy_vm_tags" "internal2_vm_vm_tag" {
 
 # Create Security Groups
 resource "nsxt_policy_group" "env_threat" {
-    display_name = "IDPS - External"
-    criteria {
-        condition {
-            key = "Tag"
-            member_type = "VirtualMachine"
-            operator = "CONTAINS"
-            value = "Environment|EXTERNAL"
-        }
-    }
+  display_name = "IDPS - External"
+  criteria {
+      condition {
+         key = "Tag"
+          member_type = "VirtualMachine"
+          operator = "CONTAINS"
+          value = "Environment|EXTERNAL"
+      }
+  }
 }
 
 resource "nsxt_policy_group" "env_prod" {
-    display_name = "IDPS - Production Applications"
-    criteria {
-        condition {
-            key = "Tag"
-            member_type = "VirtualMachine"
-            operator = "CONTAINS"
-            value = "Environment|Production"
-        }
-    }
+  display_name = "IDPS - Production Applications"
+  criteria {
+      condition {
+          key = "Tag"
+          member_type = "VirtualMachine"
+          operator = "CONTAINS"
+          value = "Environment|Production"
+      }
+  }
 }
 
 resource "nsxt_policy_group" "env_dev" {
-    display_name = "IDPS - Development Applications"
-    criteria {
-        condition {
-            key = "Tag"
-            member_type = "VirtualMachine"
-            operator = "CONTAINS"
-            value = "Environment|Development"
-        }
+  display_name = "IDPS - Development Applications"
+  criteria {
+      condition {
+          key = "Tag"
+          member_type = "VirtualMachine"
+          operator = "CONTAINS"
+          value = "Environment|Development"
+      }
+  }
+}
+
+resource "nsxt_policy_group" "dnat_dev" {
+  display_name = "IDPS - DNAT DEV IPSET"
+  criteria {
+    ipaddress_expression {
+      ip_addresses = ["193.1.1.101"]
     }
+  }
+}
+
+resource "nsxt_policy_group" "dnat_prod" {
+  display_name = "IDPS - DNAT PROD IPSET"
+  criteria {
+    ipaddress_expression {
+      ip_addresses = ["193.1.1.100"]
+    }
+  }
 }
 
 # Create DFW Rules for Environment
@@ -438,7 +520,7 @@ resource "nsxt_policy_security_policy" "external_env" {
   rule {
     display_name = "allow any to production"
     source_groups = [nsxt_policy_group.env_threat.path]
-    destination_groups = [nsxt_policy_group.env_prod.path]
+    destination_groups = [nsxt_policy_group.env_prod.path, nsxt_policy_group.dnat_prod.path]
     action = "ALLOW"
     logged = false
     scope = [nsxt_policy_group.env_threat.path, nsxt_policy_group.env_prod.path]
@@ -446,7 +528,7 @@ resource "nsxt_policy_security_policy" "external_env" {
   rule {
     display_name = "allow any to development"
     source_groups = [nsxt_policy_group.env_threat.path]
-    destination_groups = [nsxt_policy_group.env_dev.path]
+    destination_groups = [nsxt_policy_group.env_dev.path, nsxt_policy_group.dnat_dev.path]
     action = "ALLOW"
     logged = false
     scope = [nsxt_policy_group.env_threat.path, nsxt_policy_group.env_dev.path]
