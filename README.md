@@ -2,5 +2,5 @@
 
 This example is for DEMO purpose ONLY.
 
-# IDS/IPS Demo Topology
+# Network Diagram
 ![Diagram](IDPS-demo.png)
