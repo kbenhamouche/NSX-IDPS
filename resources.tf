@@ -222,7 +222,7 @@ data "vsphere_network" "internal" {
 // Create new VM for External
 resource "vsphere_virtual_machine" "threat-vm" {
   depends_on = [nsxt_policy_segment.external, data.vsphere_network.external]
-  name = "IDPS-Threat-vm"
+  name = "IDPS-Threat"
   datastore_id = data.vsphere_datastore.datastore-external.id
   resource_pool_id = data.vsphere_compute_cluster.compute-external.resource_pool_id
   guest_id = "ubuntu64Guest"
@@ -242,7 +242,7 @@ resource "vsphere_virtual_machine" "threat-vm" {
 // Create new VM for DMZ
 resource "vsphere_virtual_machine" "dmz1-vm" {
   depends_on = [nsxt_policy_segment.dmz, data.vsphere_network.dmz]
-  name = "IDPS-WEB1-vm"
+  name = "IDPS-WEB-Prod"
   datastore_id = data.vsphere_datastore.datastore-internal1.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
   guest_id = "ubuntu64Guest"
@@ -259,7 +259,7 @@ resource "vsphere_virtual_machine" "dmz1-vm" {
   }
 }
 
-resource "null_resource" "before1" {
+/*resource "null_resource" "before1" {
   depends_on = [vsphere_virtual_machine.dmz1-vm]
 }
 
@@ -270,11 +270,11 @@ resource "null_resource" "delay1" {
   triggers = {
     "before1" = null_resource.before.id
   }
-}
+}*/
 
 resource "vsphere_virtual_machine" "dmz2-vm" {
   depends_on = [nsxt_policy_segment.dmz, data.vsphere_network.dmz]
-  name = "IDPS-WEB2-vm"
+  name = "IDPS-WEB-Dev"
   datastore_id = data.vsphere_datastore.datastore-internal2.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
   guest_id = "ubuntu64Guest"
@@ -294,7 +294,7 @@ resource "vsphere_virtual_machine" "dmz2-vm" {
 // Create new VM for Internal
 resource "vsphere_virtual_machine" "internal1-vm" {
   depends_on = [nsxt_policy_segment.internal, data.vsphere_network.internal]
-  name = "IDPS-APP1-vm"
+  name = "IDPS-APP-Dev"
   datastore_id = data.vsphere_datastore.datastore-internal1.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
   guest_id = "ubuntu64Guest"
@@ -311,7 +311,7 @@ resource "vsphere_virtual_machine" "internal1-vm" {
   }
 }
 
-resource "null_resource" "before2" {
+/*resource "null_resource" "before2" {
   depends_on = [vsphere_virtual_machine.internal1-vm]
 }
 
@@ -322,11 +322,11 @@ resource "null_resource" "delay2" {
   triggers = {
     "before2" = null_resource.before.id
   }
-}
+}*/
 
 resource "vsphere_virtual_machine" "internal2-vm" {
   depends_on = [nsxt_policy_segment.internal, data.vsphere_network.internal]
-  name = "IDPS-APP2-vm"
+  name = "IDPS-APP-Prod"
   datastore_id = data.vsphere_datastore.datastore-internal2.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
   guest_id = "ubuntu64Guest"
@@ -348,7 +348,7 @@ resource "vsphere_virtual_machine" "internal2-vm" {
 # Assign the tags to the Threat VM
 data "nsxt_policy_vm" "threat_vm" {
   depends_on = [vsphere_virtual_machine.threat-vm]
-  display_name = "IDPS-Threat-vm"
+  display_name = "IDPS-Threat"
 }
 
 resource "nsxt_policy_vm_tags" "threat_vm_tag" {
@@ -367,12 +367,12 @@ resource "nsxt_policy_vm_tags" "threat_vm_tag" {
 # Assign the tags to the DMZ VMs
 data "nsxt_policy_vm" "dmz1_vm" {
   depends_on = [vsphere_virtual_machine.dmz1-vm]
-  display_name = "IDPS-WEB1-vm"
+  display_name = "IDPS-WEB-Prod"
 }
 
 data "nsxt_policy_vm" "dmz2_vm" {
   depends_on = [vsphere_virtual_machine.dmz2-vm]
-  display_name = "IDPS-WEB2-vm"
+  display_name = "IDPS-WEB-Dev"
 }
 
 resource "nsxt_policy_vm_tags" "dmz1_vm_tag" {
@@ -412,12 +412,12 @@ resource "nsxt_policy_vm_tags" "dmz2_vm_tag" {
 # Assign the tags to the Internal VMs
 data "nsxt_policy_vm" "internal1_vm" {
   depends_on = [vsphere_virtual_machine.internal1-vm]
-  display_name = "IDPS-APP1-vm"
+  display_name = "IDPS-APP-Dev"
 }
 
 data "nsxt_policy_vm" "internal2_vm" {
   depends_on = [vsphere_virtual_machine.internal2-vm]
-  display_name = "IDPS-APP2-vm"
+  display_name = "IDPS-APP-Prod"
 }
 
 resource "nsxt_policy_vm_tags" "internal1_vm_vm_tag" {
@@ -425,11 +425,11 @@ resource "nsxt_policy_vm_tags" "internal1_vm_vm_tag" {
   instance_id = data.nsxt_policy_vm.internal1_vm.instance_id
   tag {
     scope = "Environment"
-    tag = "Production"
+    tag = "Development"
   }
   tag {
     scope = "appName"
-    tag = "Application-1"
+    tag = "Application-2"
   }
   tag {
     scope = "appTier"
@@ -442,11 +442,11 @@ resource "nsxt_policy_vm_tags" "internal2_vm_vm_tag" {
   instance_id = data.nsxt_policy_vm.internal2_vm.instance_id
   tag {
     scope = "Environment"
-    tag   = "Development"
+    tag   = "Production"
   }
   tag {
     scope = "appName"
-    tag   = "Application-2"
+    tag   = "Application-1"
   }
   tag {
     scope = "appTier"
