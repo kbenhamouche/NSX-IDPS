@@ -33,7 +33,7 @@ resource "nsxt_policy_tier1_gateway" "t1_gateway" {
   enable_firewall           = "false"
   enable_standby_relocation = "false"
   tier0_path                = data.nsxt_policy_tier0_gateway.t0_gateway.path
-  route_advertisement_types = ["TIER1_CONNECTED"]
+  route_advertisement_types = ["TIER1_CONNECTED", "TIER1_NAT"]
   pool_allocation           = "ROUTING"
 }
   
