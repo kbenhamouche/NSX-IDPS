@@ -244,7 +244,7 @@ resource "vsphere_virtual_machine" "threat-vm" {
 // Create new VM for DMZ
 resource "vsphere_virtual_machine" "dmz1-vm" {
   depends_on = [nsxt_policy_segment.dmz, data.vsphere_network.dmz]
-  name = "IDPS-WEB1-Prod"
+  name = "IDPS-WEB-Prod"
   datastore_id = data.vsphere_datastore.datastore-internal1.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
   guest_id = "ubuntu64Guest"
@@ -405,7 +405,7 @@ resource "nsxt_policy_vm_tags" "internal1_vm_vm_tag" {
   }
   tag {
     scope = "appName"
-    tag = "Application-"
+    tag = "Application-2"
   }
   tag {
     scope = "appTier"
@@ -422,7 +422,7 @@ resource "nsxt_policy_vm_tags" "internal2_vm_vm_tag" {
   }
   tag {
     scope = "appName"
-    tag   = "Application-2"
+    tag   = "Application-1"
   }
   tag {
     scope = "appTier"
