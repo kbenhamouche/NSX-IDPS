@@ -33,7 +33,7 @@ resource "nsxt_policy_tier1_gateway" "t1_gateway" {
   enable_firewall           = "false"
   enable_standby_relocation = "false"
   tier0_path                = data.nsxt_policy_tier0_gateway.t0_gateway.path
-  route_advertisement_types = ["TIER1_CONNECTED", "TIER1_NAT"]
+  route_advertisement_types = ["TIER1_CONNECTED"] // "TIER1_NAT"
   pool_allocation           = "ROUTING"
 }
   
@@ -103,6 +103,7 @@ resource "nsxt_policy_segment" "internal" {
   }
 }
 
+/*
 // Create SNAT and DNAT rules for DMZ Segment
 resource "nsxt_policy_nat_rule" "rule1" {
   nsx_id              = "DMZ-SNAT"
@@ -140,6 +141,7 @@ resource "nsxt_policy_nat_rule" "rule4" {
   translated_networks = ["193.1.1.120"]
   gateway_path        = nsxt_policy_tier1_gateway.t1_gateway.path
 }
+*/
 
 // ----- vCenter Data -----
 data "vsphere_datacenter" "datacenter" {
@@ -242,7 +244,7 @@ resource "vsphere_virtual_machine" "threat-vm" {
 // Create new VM for DMZ
 resource "vsphere_virtual_machine" "dmz1-vm" {
   depends_on = [nsxt_policy_segment.dmz, data.vsphere_network.dmz]
-  name = "IDPS-WEB-Prod"
+  name = "IDPS-WEB1-Prod"
   datastore_id = data.vsphere_datastore.datastore-internal1.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
   guest_id = "ubuntu64Guest"
@@ -258,19 +260,6 @@ resource "vsphere_virtual_machine" "dmz1-vm" {
     thin_provisioned = true
   }
 }
-
-/*resource "null_resource" "before1" {
-  depends_on = [vsphere_virtual_machine.dmz1-vm]
-}
-
-resource "null_resource" "delay1" {
-  provisioner "local-exec" {
-    command = "sleep 10"
-  }
-  triggers = {
-    "before1" = null_resource.before.id
-  }
-}*/
 
 resource "vsphere_virtual_machine" "dmz2-vm" {
   depends_on = [nsxt_policy_segment.dmz, data.vsphere_network.dmz]
@@ -310,19 +299,6 @@ resource "vsphere_virtual_machine" "internal1-vm" {
     thin_provisioned = true
   }
 }
-
-/*resource "null_resource" "before2" {
-  depends_on = [vsphere_virtual_machine.internal1-vm]
-}
-
-resource "null_resource" "delay2" {
-  provisioner "local-exec" {
-    command = "sleep 10"
-  }
-  triggers = {
-    "before2" = null_resource.before.id
-  }
-}*/
 
 resource "vsphere_virtual_machine" "internal2-vm" {
   depends_on = [nsxt_policy_segment.internal, data.vsphere_network.internal]
@@ -429,7 +405,7 @@ resource "nsxt_policy_vm_tags" "internal1_vm_vm_tag" {
   }
   tag {
     scope = "appName"
-    tag = "Application-2"
+    tag = "Application-"
   }
   tag {
     scope = "appTier"
@@ -446,7 +422,7 @@ resource "nsxt_policy_vm_tags" "internal2_vm_vm_tag" {
   }
   tag {
     scope = "appName"
-    tag   = "Application-1"
+    tag   = "Application-2"
   }
   tag {
     scope = "appTier"
@@ -491,6 +467,7 @@ resource "nsxt_policy_group" "env_dev" {
   }
 }
 
+/*
 resource "nsxt_policy_group" "dnat_dev" {
   display_name = "IDPS - DNAT DEV IPSET"
   criteria {
@@ -508,6 +485,7 @@ resource "nsxt_policy_group" "dnat_prod" {
     }
   }
 }
+*/
 
 # Create DFW Rules for Environment
 resource "nsxt_policy_security_policy" "external_env" {
@@ -520,7 +498,7 @@ resource "nsxt_policy_security_policy" "external_env" {
   rule {
     display_name = "allow any to production"
     source_groups = [nsxt_policy_group.env_threat.path]
-    destination_groups = [nsxt_policy_group.env_prod.path, nsxt_policy_group.dnat_prod.path]
+    destination_groups = [nsxt_policy_group.env_prod.path] // nsxt_policy_group.dnat_prod.path
     action = "ALLOW"
     logged = false
     scope = [nsxt_policy_group.env_threat.path, nsxt_policy_group.env_prod.path]
@@ -528,7 +506,7 @@ resource "nsxt_policy_security_policy" "external_env" {
   rule {
     display_name = "allow any to development"
     source_groups = [nsxt_policy_group.env_threat.path]
-    destination_groups = [nsxt_policy_group.env_dev.path, nsxt_policy_group.dnat_dev.path]
+    destination_groups = [nsxt_policy_group.env_dev.path] //nsxt_policy_group.dnat_dev.path
     action = "ALLOW"
     logged = false
     scope = [nsxt_policy_group.env_threat.path, nsxt_policy_group.env_dev.path]
