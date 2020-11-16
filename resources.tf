@@ -33,7 +33,7 @@ resource "nsxt_policy_tier1_gateway" "t1_gateway" {
   enable_firewall           = "false"
   enable_standby_relocation = "false"
   tier0_path                = data.nsxt_policy_tier0_gateway.t0_gateway.path
-  route_advertisement_types = ["TIER1_CONNECTED"] // "TIER1_NAT"
+  route_advertisement_types = ["TIER1_CONNECTED"] //"TIER1_NAT"
   pool_allocation           = "ROUTING"
 }
   
@@ -131,6 +131,7 @@ resource "nsxt_policy_nat_rule" "rule3" {
   destination_networks = ["193.1.1.101/32"]
   gateway_path         = nsxt_policy_tier1_gateway.t1_gateway.path
 }
+*/
 
 // Create SNAT rules for Internal Segment
 resource "nsxt_policy_nat_rule" "rule4" {
@@ -141,7 +142,7 @@ resource "nsxt_policy_nat_rule" "rule4" {
   translated_networks = ["193.1.1.120"]
   gateway_path        = nsxt_policy_tier1_gateway.t1_gateway.path
 }
-*/
+
 
 // ----- vCenter Data -----
 data "vsphere_datacenter" "datacenter" {
