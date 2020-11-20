@@ -33,7 +33,7 @@ resource "nsxt_policy_tier1_gateway" "t1_gateway" {
   enable_firewall           = "false"
   enable_standby_relocation = "false"
   tier0_path                = data.nsxt_policy_tier0_gateway.t0_gateway.path
-  route_advertisement_types = ["TIER1_CONNECTED"] //"TIER1_NAT"
+  route_advertisement_types = ["TIER1_CONNECTED"]
   pool_allocation           = "ROUTING"
 }
   
@@ -102,47 +102,6 @@ resource "nsxt_policy_segment" "internal" {
     connectivity = "ON"
   }
 }
-
-/*
-// Create SNAT and DNAT rules for DMZ Segment
-resource "nsxt_policy_nat_rule" "rule1" {
-  nsx_id              = "DMZ-SNAT"
-  display_name        = "DMZ-SNAT"
-  action              = "SNAT"
-  source_networks     = ["192.168.10.0/24"]
-  translated_networks = ["193.1.1.110"]
-  gateway_path        = nsxt_policy_tier1_gateway.t1_gateway.path
-}
-
-resource "nsxt_policy_nat_rule" "rule2" {
-  nsx_id               = "DMZ-DNAT-Production"
-  display_name         = "DMZ-DNAT-Production"
-  action               = "DNAT"
-  translated_networks  = ["192.168.10.100/32"]
-  destination_networks = ["193.1.1.100/32"]
-  gateway_path         = nsxt_policy_tier1_gateway.t1_gateway.path
-}
-
-resource "nsxt_policy_nat_rule" "rule3" {
-  nsx_id               = "DMZ-DNAT-Development"
-  display_name         = "DMZ-DNAT-Development"
-  action               = "DNAT"
-  translated_networks  = ["192.168.10.101/32"]
-  destination_networks = ["193.1.1.101/32"]
-  gateway_path         = nsxt_policy_tier1_gateway.t1_gateway.path
-}
-*/
-
-// Create SNAT rules for Internal Segment
-resource "nsxt_policy_nat_rule" "rule4" {
-  nsx_id              = "Internal-SNAT"
-  display_name        = "Internal-SNAT"
-  action              = "SNAT"
-  source_networks     = ["192.168.20.0/24"]
-  translated_networks = ["193.1.1.120"]
-  gateway_path        = nsxt_policy_tier1_gateway.t1_gateway.path
-}
-
 
 // ----- vCenter Data -----
 data "vsphere_datacenter" "datacenter" {
@@ -245,7 +204,7 @@ resource "vsphere_virtual_machine" "threat-vm" {
 // Create new VM for DMZ
 resource "vsphere_virtual_machine" "dmz1-vm" {
   depends_on = [nsxt_policy_segment.dmz, data.vsphere_network.dmz]
-  name = "IDPS-WEB-Prod"
+  name = "IDPS-WEB-Dev"
   datastore_id = data.vsphere_datastore.datastore-internal1.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
   guest_id = "ubuntu64Guest"
@@ -264,7 +223,7 @@ resource "vsphere_virtual_machine" "dmz1-vm" {
 
 resource "vsphere_virtual_machine" "dmz2-vm" {
   depends_on = [nsxt_policy_segment.dmz, data.vsphere_network.dmz]
-  name = "IDPS-WEB-Dev"
+  name = "IDPS-WEB-Prod"
   datastore_id = data.vsphere_datastore.datastore-internal2.id
   resource_pool_id = data.vsphere_compute_cluster.compute-internal.resource_pool_id
   guest_id = "ubuntu64Guest"
@@ -344,12 +303,12 @@ resource "nsxt_policy_vm_tags" "threat_vm_tag" {
 # Assign the tags to the DMZ VMs
 data "nsxt_policy_vm" "dmz1_vm" {
   depends_on = [vsphere_virtual_machine.dmz1-vm]
-  display_name = "IDPS-WEB-Prod"
+  display_name = "IDPS-WEB-Dev"
 }
 
 data "nsxt_policy_vm" "dmz2_vm" {
   depends_on = [vsphere_virtual_machine.dmz2-vm]
-  display_name = "IDPS-WEB-Dev"
+  display_name = "IDPS-WEB-Prod"
 }
 
 resource "nsxt_policy_vm_tags" "dmz1_vm_tag" {
@@ -357,11 +316,11 @@ resource "nsxt_policy_vm_tags" "dmz1_vm_tag" {
   instance_id = data.nsxt_policy_vm.dmz1_vm.instance_id
   tag {
     scope = "Environment"
-    tag = "Production"
+    tag = "Development"
   }
   tag {
     scope = "appName"
-    tag = "Application-1"
+    tag = "Application-2"
   }
   tag {
     scope = "appTier"
@@ -374,11 +333,11 @@ resource "nsxt_policy_vm_tags" "dmz2_vm_tag" {
   instance_id = data.nsxt_policy_vm.dmz2_vm.instance_id
   tag {
     scope = "Environment"
-    tag = "Development"
+    tag = "Production"
   }
   tag {
     scope = "appName"
-    tag = "Application-2"
+    tag = "Application-1"
   }
   tag {
     scope = "appTier"
@@ -468,25 +427,29 @@ resource "nsxt_policy_group" "env_dev" {
   }
 }
 
-/*
-resource "nsxt_policy_group" "dnat_dev" {
-  display_name = "IDPS - DNAT DEV IPSET"
+resource "nsxt_policy_group" "env_dmz" {
+  display_name = "IDPS - DMZ Segment"
   criteria {
-    ipaddress_expression {
-      ip_addresses = ["193.1.1.101"]
-    }
+      condition {
+          key = "Tag"
+          member_type = "VirtualMachine"
+          operator = "CONTAINS"
+          value = "appTier|web-server"
+      }
   }
 }
 
-resource "nsxt_policy_group" "dnat_prod" {
-  display_name = "IDPS - DNAT PROD IPSET"
+resource "nsxt_policy_group" "env_internal" {
+  display_name = "IDPS - Internal Segment"
   criteria {
-    ipaddress_expression {
-      ip_addresses = ["193.1.1.100"]
-    }
+      condition {
+          key = "Tag"
+          member_type = "VirtualMachine"
+          operator = "CONTAINS"
+          value = "appTier|app-server"
+      }
   }
 }
-*/
 
 # Create DFW Rules for Environment
 resource "nsxt_policy_security_policy" "external_env" {
@@ -495,22 +458,13 @@ resource "nsxt_policy_security_policy" "external_env" {
   locked = false
   stateful = true
   tcp_strict = false
-
   rule {
-    display_name = "allow any to production"
+    display_name = "allow any to DMZ Segment"
     source_groups = [nsxt_policy_group.env_threat.path]
-    destination_groups = [nsxt_policy_group.env_prod.path] // nsxt_policy_group.dnat_prod.path
+    destination_groups = [nsxt_policy_group.env_dmz.path]
     action = "ALLOW"
     logged = false
-    scope = [nsxt_policy_group.env_threat.path, nsxt_policy_group.env_prod.path]
-  }
-  rule {
-    display_name = "allow any to development"
-    source_groups = [nsxt_policy_group.env_threat.path]
-    destination_groups = [nsxt_policy_group.env_dev.path] //nsxt_policy_group.dnat_dev.path
-    action = "ALLOW"
-    logged = false
-    scope = [nsxt_policy_group.env_threat.path, nsxt_policy_group.env_dev.path]
+    scope = [nsxt_policy_group.env_threat.path, nsxt_policy_group.env_dmz.path]
   }
   rule {
     display_name = "deny all"
@@ -521,37 +475,67 @@ resource "nsxt_policy_security_policy" "external_env" {
   }
 }
 
-resource "nsxt_policy_security_policy" "prod_env" {
-  display_name = "IDPS - Production Env."
+resource "nsxt_policy_security_policy" "dmz_env" {
+  display_name = "IDPS - DMZ Segment"
   category = "Environment"
   locked = false
   stateful = true
   tcp_strict = false
-
   rule {
     display_name = "allow any to external"
-    source_groups = [nsxt_policy_group.env_prod.path]
+    source_groups = [nsxt_policy_group.env_dmz.path]
     destination_groups = [nsxt_policy_group.env_threat.path]
     action = "ALLOW"
     logged = false
-    scope = [nsxt_policy_group.env_prod.path, nsxt_policy_group.env_threat.path]
+    scope = [nsxt_policy_group.env_dmz.path, nsxt_policy_group.env_threat.path]
+  }
+}
+
+resource "nsxt_policy_security_policy" "internal_env" {
+  display_name = "IDPS - Internal Segment"
+  category = "Environment"
+  locked = false
+  stateful = true
+  tcp_strict = false
+  rule {
+    display_name = "allow any to external"
+    source_groups = [nsxt_policy_group.env_internal.path]
+    destination_groups = [nsxt_policy_group.env_threat.path]
+    action = "ALLOW"
+    logged = false
+    scope = [nsxt_policy_group.env_internal.path, nsxt_policy_group.env_threat.path]
+  }
+}
+
+resource "nsxt_policy_security_policy" "prod_env" {
+  display_name = "IDPS - Production Environment"
+  category = "Environment"
+  locked = false
+  stateful = true
+  tcp_strict = false
+  rule {
+    display_name = "allow any to Development"
+    source_groups = [nsxt_policy_group.env_prod.path]
+    destination_groups = [nsxt_policy_group.env_dev.path]
+    action = "ALLOW"
+    logged = false
+    scope = [nsxt_policy_group.env_prod.path, nsxt_policy_group.env_dev.path]
   }
 }
 
 resource "nsxt_policy_security_policy" "dev_env" {
-  display_name = "IDPS - Development Env."
+  display_name = "IDPS - Development Environment"
   category = "Environment"
   locked = false
   stateful = true
   tcp_strict = false
-
   rule {
-    display_name = "allow any to external"
+    display_name = "allow any to Production"
     source_groups = [nsxt_policy_group.env_dev.path]
-    destination_groups = [nsxt_policy_group.env_threat.path]
+    destination_groups = [nsxt_policy_group.env_prod.path]
     action = "ALLOW"
     logged = false
-    scope = [nsxt_policy_group.env_dev.path, nsxt_policy_group.env_threat.path]
+    scope = [nsxt_policy_group.env_dev.path, nsxt_policy_group.env_prod.path]
   }
 }
 
