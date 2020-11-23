@@ -2,6 +2,8 @@
 
 The provided Terraform script is for demo or PoC purpose ONLY.
 
+NOTE: Before you start, be sure that you understand the terraform files and the following points.
+
 The script will automatically create the following NSX objects:
 - T1 Gateway, called "T1-GW-IDPS"
 - DHCP Server, called "DHCP-Server-IDPS"
