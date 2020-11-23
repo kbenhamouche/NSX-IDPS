@@ -3,7 +3,7 @@
 The provided Terraform script is for demo or PoC purpose ONLY.
 
 The script will automatically create the following NSX objects:
-	- T1 Gateway, called "T1-GW-IDPS"
+- T1 Gateway, called "T1-GW-IDPS"
 - DHCP Server, called "DHCP-Server-IDPS"
 - Three (3) segments: External, DMZ and Internal
 - Six (8) differents tags (EXTERNAL, Production, Development, threat, Application-1, Application-2, web-server, app-server)
