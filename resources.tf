@@ -213,6 +213,13 @@ resource "vsphere_virtual_machine" "dmz1-vm" {
   }
   clone {
     template_uuid = data.vsphere_virtual_machine.vm-template.id
+    customize {
+      linux_options {
+        host_name = "IDPS-WEB-Dev"
+        domain = "demo.ca"
+      }
+      network_interface {}
+    }
   }
   disk {
     label = "web1-vm.vmdk"
@@ -232,6 +239,13 @@ resource "vsphere_virtual_machine" "dmz2-vm" {
   }
   clone {
     template_uuid = data.vsphere_virtual_machine.vm-template.id
+    customize {
+      linux_options {
+        host_name = "IDPS-WEB-Prod"
+        domain = "demo.ca"
+      }
+      network_interface {}
+    }
   }
   disk {
     label = "web2-vm.vmdk"
@@ -252,6 +266,13 @@ resource "vsphere_virtual_machine" "internal1-vm" {
   }
   clone {
     template_uuid = data.vsphere_virtual_machine.vm-template.id
+    customize {
+      linux_options {
+        host_name = "IDPS-App-Dev"
+        domain = "demo.ca"
+      }
+      network_interface {}
+    }
   }
   disk {
     label = "app1-vm.vmdk"
@@ -271,6 +292,13 @@ resource "vsphere_virtual_machine" "internal2-vm" {
   }
   clone {
     template_uuid = data.vsphere_virtual_machine.vm-template.id
+    customize {
+      linux_options {
+        host_name = "IDPS-App-Prod"
+        domain = "demo.ca"
+      }
+      network_interface {}
+    }
   }
   disk {
     label = "app2-vm.vmdk"
